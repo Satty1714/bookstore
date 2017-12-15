@@ -15,7 +15,7 @@ class BooksManager(models.Manager):
         elif sort == 'price':
             order_by = ('price',)
         else:
-            order_by = ('-pk',)
+            order_by = ('-pk',) #按照primary key将序排序
         #查询数据
         books_li =self.filter(type_id=type_id).order_by(*order_by)
         #查询结果集的限制
@@ -26,7 +26,7 @@ class BooksManager(models.Manager):
     def get_books_by_id(self,book_id):
         '''根据商品的id获取商品信息-'''
         try:
-            book = self.get(id=book_id)
+            book = self.get(id=book_id)#id为数据库表的字段名是主键, book_id是定义的形参传给views
         except self.model.DoesNotExist:
             #不存在商品信息
             book = None

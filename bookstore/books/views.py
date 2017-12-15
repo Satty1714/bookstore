@@ -3,10 +3,14 @@ from books.models import Books
 from books.enums import *
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
+from django_redis import get_redis_connection
+from django.views.decorators.cache import cache_page
 
 
 # Create your views here.
+# @cache_page(60 * 10)
 def index(request):
+    '''显示首页'''
     #查询每个种类的3的新品信息和4个销量最好的商品信息
     python_new = Books.objects.get_books_by_type(PYTHON,3,sort='new')
     python_hot = Books.objects.get_books_by_type(PYTHON, 4, sort='hot')
@@ -44,7 +48,7 @@ def index(request):
 def detail(request, book_id):
     '''显示商品的详情页面'''
     # 获取商品的详情信息
-    books = Books.objects.get_books_by_id(book_id=book_id)
+    books = Books.objects.get_books_by_id(book_id=book_id)#前者是从models来的，后者是定义的
 
     if books is None:
         # 商品不存在，跳转到首页
@@ -53,6 +57,16 @@ def detail(request, book_id):
     # 新品推荐
     books_li = Books.objects.get_books_by_type(type_id=books.type_id, limit=2, sort='new')
 
+    #用户登录之后，才记录浏览记录
+    # 每个用户浏览记录对应redis中的一条信息 格式:'history_用户id':[10,9,2,3,4]
+    if request.session.has_key('islogin'):
+        con = get_redis_connection('default')
+        key = 'history_%d' % request.session.get('passport_id')
+        #先从redis列表中移除books.id
+        con.lrem(key,0,books.id)
+        con.lpush(key,books.id)
+        #保存用户最近浏览的5个商品
+        con.ltrim(key,0,4)
     # 定义上下文
     context = {'books': books, 'books_li': books_li}
 

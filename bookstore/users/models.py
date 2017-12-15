@@ -24,7 +24,14 @@ class PassportManger(models.Manager):
         except self.model.DoesNotExist:
             #账户不存在
             passport = None
+        return passport
 
+    def check_passport(self,username):
+        '''检查是否存在用户名'''
+        try:
+            passport = self.get(username=username)
+        except self.model.DoesNotExist:
+            passport = None
         return passport
 
 
@@ -39,3 +46,46 @@ class User(BaseModel):
 
     class Meta:
         db_table = 's_user_account'
+
+
+class AddressManager(models.Manager):
+    '''地址模型管理器类'''
+    def get_default_address(self,passport_id):
+        '''查询指定用户的默认收货地址'''
+        try:
+            addr = self.get(passport_id=passport_id,is_default=True)
+        except self.model.DoesNotExist:
+            addr = None
+        return addr
+
+    def add_one_address(self,passport_id,recipient_name,recipient_addr,zip_code, recipient_phone):
+        '''添加收货地址'''
+        #判断用户是否有默认收货地址
+        addr = self.get_default_address(passport_id=passport_id)
+        if addr:
+            is_default = False
+        else:
+            is_default = True
+
+        addr =self.create(passport_id=passport_id,
+                           recipient_name=recipient_name,
+                           recipient_addr=recipient_addr,
+                           zip_code=zip_code,
+                           recipient_phone=recipient_phone,
+                           is_default=is_default)
+
+        return addr
+
+class Address(BaseModel):
+    '''地址模型类'''
+    recipient_name = models.CharField(max_length=20,verbose_name='收件人')
+    recipient_addr = models.CharField(max_length=222,verbose_name='收件人地址')
+    zip_code = models.CharField(max_length=6,verbose_name='邮政编码')
+    recipient_phone = models.CharField(max_length=11,verbose_name='电话')
+    is_default = models.BooleanField(default=False,verbose_name='是否默认')
+    passport = models.ForeignKey('User')
+
+    objects = AddressManager()
+
+    class Meta:
+        db_table = 's_user_address'
